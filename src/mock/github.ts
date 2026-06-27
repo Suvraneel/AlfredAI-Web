@@ -1,0 +1,107 @@
+import type { GitHubPR, GitHubCommit, GitHubReview } from '@/types/api'
+
+export const mockPRs: GitHubPR[] = [
+  {
+    id: 61,
+    number: 61,
+    title: 'feat: OAuth2 login flow',
+    body: 'Implements OAuth2 login flow with Atlassian identity provider. Closes #PROJ-47.',
+    state: 'open',
+    html_url: 'https://github.com/example/repo/pull/61',
+    head_branch: 'feat/oauth2-login',
+    base_branch: 'main',
+    author: 'sarah-chen',
+    created_at: '2026-06-24T09:00:00Z',
+    updated_at: '2026-06-26T14:00:00Z',
+    merged_at: null,
+    review_state: 'APPROVED',
+    is_merged: false,
+  },
+  {
+    id: 58,
+    number: 58,
+    title: 'fix: memory leak in worker',
+    body: 'Fixes memory leak in worker process. Addresses PROJ-52.',
+    state: 'open',
+    html_url: 'https://github.com/example/repo/pull/58',
+    head_branch: 'fix/worker-memory-leak',
+    base_branch: 'main',
+    author: 'marcus-lee',
+    created_at: '2026-06-22T10:00:00Z',
+    updated_at: '2026-06-25T11:00:00Z',
+    merged_at: null,
+    review_state: 'CHANGES_REQUESTED',
+    is_merged: false,
+  },
+  {
+    id: 55,
+    number: 55,
+    title: 'feat: audit log API',
+    body: 'Implements audit log export API. Closes PROJ-61.',
+    state: 'closed',
+    html_url: 'https://github.com/example/repo/pull/55',
+    head_branch: 'feat/audit-log-api',
+    base_branch: 'main',
+    author: 'sarah-chen',
+    created_at: '2026-06-18T09:00:00Z',
+    updated_at: '2026-06-23T17:00:00Z',
+    merged_at: '2026-06-23T17:00:00Z',
+    review_state: 'APPROVED',
+    is_merged: true,
+  },
+  {
+    id: 62,
+    number: 62,
+    title: 'chore: update dependencies',
+    body: 'Update all npm dependencies to latest versions.',
+    state: 'open',
+    html_url: 'https://github.com/example/repo/pull/62',
+    head_branch: 'chore/update-deps',
+    base_branch: 'main',
+    author: 'alex-kim',
+    created_at: '2026-06-25T15:00:00Z',
+    updated_at: '2026-06-25T15:00:00Z',
+    merged_at: null,
+    review_state: null,
+    is_merged: false,
+  },
+  {
+    id: 60,
+    number: 60,
+    title: 'docs: API documentation update',
+    body: 'Updates API documentation. Relates to PROJ-53.',
+    state: 'open',
+    html_url: 'https://github.com/example/repo/pull/60',
+    head_branch: 'docs/api-update',
+    base_branch: 'main',
+    author: 'alex-kim',
+    created_at: '2026-06-20T11:00:00Z',
+    updated_at: '2026-06-20T11:00:00Z',
+    merged_at: null,
+    review_state: null,
+    is_merged: false,
+  },
+]
+
+export const mockReviews: Record<number, GitHubReview[]> = {
+  61: [
+    { id: 1, reviewer: 'alex-kim', state: 'APPROVED', submitted_at: '2026-06-26T10:00:00Z', body: 'Looks good! Nice clean implementation.' },
+    { id: 2, reviewer: 'marcus-lee', state: 'APPROVED', submitted_at: '2026-06-26T12:00:00Z', body: 'LGTM' },
+  ],
+  58: [
+    { id: 3, reviewer: 'sarah-chen', state: 'CHANGES_REQUESTED', submitted_at: '2026-06-24T14:00:00Z', body: 'Need to add tests for the edge cases. Also the timeout value seems arbitrary.' },
+  ],
+  55: [
+    { id: 4, reviewer: 'alex-kim', state: 'APPROVED', submitted_at: '2026-06-23T16:00:00Z', body: null },
+  ],
+}
+
+export const mockCommits: Record<number, GitHubCommit[]> = {
+  61: [
+    { sha: 'a1b2c3d', message: 'feat: implement OAuth2 callback handler', author_name: 'Sarah Chen', committed_at: '2026-06-25T09:00:00Z', html_url: 'https://github.com/example/repo/commit/a1b2c3d' },
+    { sha: 'e4f5g6h', message: 'feat: add OAuth2 token storage', author_name: 'Sarah Chen', committed_at: '2026-06-24T16:00:00Z', html_url: 'https://github.com/example/repo/commit/e4f5g6h' },
+  ],
+  58: [
+    { sha: 'i7j8k9l', message: 'fix: add memory cleanup on worker shutdown', author_name: 'Marcus Lee', committed_at: '2026-06-22T11:00:00Z', html_url: 'https://github.com/example/repo/commit/i7j8k9l' },
+  ],
+}
