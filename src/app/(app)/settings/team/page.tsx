@@ -1,5 +1,8 @@
 'use client'
 import { useState, useEffect } from "react"
+import { useForm, Controller } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { useAuth } from "@/contexts/AuthContext"
 import { getUsers, inviteUser } from "@/lib/api"
 import { Button } from "@/components/ui/button"
@@ -15,16 +18,31 @@ import type { UserProfile } from "@/types/api"
 import { Users, UserPlus, Copy, Check, Lock } from "lucide-react"
 import { toast } from "sonner"
 
+const inviteSchema = z.object({
+  email: z.string().email("Valid email required"),
+  role: z.enum(["admin", "member"]),
+})
+
+type InviteFormValues = z.infer<typeof inviteSchema>
+
 export default function TeamPage() {
   const { user } = useAuth()
   const [users, setUsers] = useState<UserProfile[]>([])
   const [loading, setLoading] = useState(true)
   const [inviteOpen, setInviteOpen] = useState(false)
-  const [email, setEmail] = useState('')
-  const [role, setRole] = useState<'admin' | 'member'>('member')
-  const [inviting, setInviting] = useState(false)
   const [tempPassword, setTempPassword] = useState<string | null>(null)
   const [copied, setCopied] = useState(false)
+
+  const {
+    register: registerField,
+    handleSubmit,
+    control,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<InviteFormValues>({
+    resolver: zodResolver(inviteSchema),
+    defaultValues: { email: '', role: 'member' },
+  })
 
   useEffect(() => {
     if (user?.role === 'admin') {
@@ -48,26 +66,21 @@ export default function TeamPage() {
     )
   }
 
-  const handleInvite = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email) return
-    setInviting(true)
+  const handleInvite = async (data: InviteFormValues) => {
     try {
-      const result = await inviteUser(email, role)
+      const result = await inviteUser(data.email, data.role)
       setTempPassword(result.temporary_password)
       setUsers(prev => [...prev, {
         user_id: result.user_id,
         email: result.email,
         tenant_id: user.tenant_id,
-        role,
+        role: data.role,
         created_at: new Date().toISOString(),
         is_active: true,
       }])
-      setEmail('')
+      reset()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to invite user")
-    } finally {
-      setInviting(false)
     }
   }
 
@@ -140,7 +153,7 @@ export default function TeamPage() {
       </div>
 
       {/* Invite dialog */}
-      <Dialog open={inviteOpen && !tempPassword} onOpenChange={v => { if (!v) { setInviteOpen(false); setEmail(''); } }}>
+      <Dialog open={inviteOpen && !tempPassword} onOpenChange={v => { if (!v) { setInviteOpen(false); reset(); } }}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Invite team member</DialogTitle>
@@ -148,32 +161,33 @@ export default function TeamPage() {
               They'll receive a temporary password to share out-of-band. No email is sent automatically.
             </DialogDescription>
           </DialogHeader>
-          <form onSubmit={handleInvite} className="space-y-4">
+          <form onSubmit={handleSubmit(handleInvite)} className="space-y-4">
             <div className="space-y-1.5">
               <Label>Email</Label>
-              <Input
-                type="email"
-                value={email}
-                onChange={e => setEmail(e.target.value)}
-                placeholder="colleague@company.com"
-                required
-              />
+              <Input type="email" placeholder="colleague@company.com" {...registerField('email')} />
+              {errors.email && <p className="text-xs text-error">{errors.email.message}</p>}
             </div>
             <div className="space-y-1.5">
               <Label>Role</Label>
-              <Select value={role} onValueChange={v => setRole(v as 'admin' | 'member')}>
-                <SelectTrigger>
-                  <SelectValue />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="member">Member</SelectItem>
-                  <SelectItem value="admin">Admin</SelectItem>
-                </SelectContent>
-              </Select>
+              <Controller
+                control={control}
+                name="role"
+                render={({ field }) => (
+                  <Select value={field.value} onValueChange={field.onChange}>
+                    <SelectTrigger>
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="member">Member</SelectItem>
+                      <SelectItem value="admin">Admin</SelectItem>
+                    </SelectContent>
+                  </Select>
+                )}
+              />
             </div>
             <DialogFooter>
-              <Button type="button" variant="outline" onClick={() => setInviteOpen(false)}>Cancel</Button>
-              <Button type="submit" loading={inviting}>Send invite</Button>
+              <Button type="button" variant="outline" onClick={() => { setInviteOpen(false); reset(); }}>Cancel</Button>
+              <Button type="submit" loading={isSubmitting}>Send invite</Button>
             </DialogFooter>
           </form>
         </DialogContent>

@@ -1,58 +1,72 @@
 'use client'
-import { useState, useEffect } from "react"
+import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { ChevronDown, ChevronUp } from "lucide-react"
 import { getTenantId } from "@/lib/auth"
-import { toast } from "sonner"
+import { useState } from "react"
+
+const schema = z.object({
+  email: z.string().email("Valid email required"),
+  password: z.string().min(1, "Password required"),
+  tenantId: z.string().min(1, "Workspace ID required"),
+  rememberWorkspace: z.boolean(),
+})
+
+type FormValues = z.infer<typeof schema>
 
 export default function LoginPage() {
   const router = useRouter()
   const { login, user } = useAuth()
-  const [email, setEmail] = useState('')
-  const [password, setPassword] = useState('')
-  const [tenantId, setTenantId] = useState('')
-  const [rememberWorkspace, setRememberWorkspace] = useState(true)
   const [workspaceOpen, setWorkspaceOpen] = useState(false)
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState('')
+
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    watch,
+    setError,
+    formState: { errors, isSubmitting },
+  } = useForm<FormValues>({
+    resolver: zodResolver(schema),
+    defaultValues: { email: '', password: '', tenantId: '', rememberWorkspace: true },
+  })
 
   useEffect(() => {
     const stored = getTenantId()
-    if (stored) { setTenantId(stored); setWorkspaceOpen(false) }
-    else setWorkspaceOpen(true)
-  }, [])
+    if (stored) {
+      setValue('tenantId', stored)
+      setWorkspaceOpen(false)
+    } else {
+      setWorkspaceOpen(true)
+    }
+  }, [setValue])
 
   useEffect(() => {
     if (user) router.replace('/chat')
   }, [user, router])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError('')
-    if (!tenantId) { setError('Workspace ID is required.'); setWorkspaceOpen(true); return }
-    setLoading(true)
+  const onSubmit = async (data: FormValues) => {
     try {
-      await login(email, tenantId, password)
-      if (!rememberWorkspace) localStorage.removeItem('alfred_tenant_id')
+      await login(data.email, data.tenantId, data.password)
+      if (!data.rememberWorkspace) localStorage.removeItem('alfred_tenant_id')
       router.replace('/chat')
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Login failed')
-    } finally {
-      setLoading(false)
+      setError('root', { message: e instanceof Error ? e.message : 'Login failed' })
     }
   }
 
-  // suppress unused import warning
-  void toast
+  const tenantId = watch('tenantId')
 
   return (
     <div className="min-h-full flex flex-col items-center justify-center px-4 py-12 bg-bg-base">
-      {/* Logo */}
       <div className="flex items-center gap-2 mb-8">
         <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-gradient-to-br from-accent-from to-accent-to text-white text-sm font-bold">
           A
@@ -67,18 +81,17 @@ export default function LoginPage() {
             <p className="mt-1 text-sm text-text-muted">Sign in to your workspace</p>
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
             <div className="space-y-1.5">
               <Label htmlFor="email">Email</Label>
               <Input
                 id="email"
                 type="email"
                 autoComplete="email"
-                value={email}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setEmail(e.target.value)}
                 placeholder="you@company.com"
-                required
+                {...register('email')}
               />
+              {errors.email && <p className="text-xs text-error">{errors.email.message}</p>}
             </div>
 
             <div className="space-y-1.5">
@@ -87,11 +100,10 @@ export default function LoginPage() {
                 id="password"
                 type="password"
                 autoComplete="current-password"
-                value={password}
-                onChange={(e: React.ChangeEvent<HTMLInputElement>) => setPassword(e.target.value)}
                 placeholder="••••••••••••"
-                required
+                {...register('password')}
               />
+              {errors.password && <p className="text-xs text-error">{errors.password.message}</p>}
             </div>
 
             {/* Workspace settings collapsible */}
@@ -111,18 +123,17 @@ export default function LoginPage() {
                     <Input
                       id="tenantId"
                       type="text"
-                      value={tenantId}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setTenantId(e.target.value)}
                       placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                       className="font-mono text-xs"
+                      {...register('tenantId')}
                     />
+                    {errors.tenantId && <p className="text-xs text-error">{errors.tenantId.message}</p>}
                   </div>
                   <label className="flex items-center gap-2 text-xs text-text-muted cursor-pointer">
                     <input
                       type="checkbox"
-                      checked={rememberWorkspace}
-                      onChange={(e: React.ChangeEvent<HTMLInputElement>) => setRememberWorkspace(e.target.checked)}
                       className="rounded"
+                      {...register('rememberWorkspace')}
                     />
                     Remember my workspace
                   </label>
@@ -130,11 +141,11 @@ export default function LoginPage() {
               )}
             </div>
 
-            {error && (
-              <p className="text-sm text-error">{error}</p>
+            {errors.root && (
+              <p className="text-sm text-error">{errors.root.message}</p>
             )}
 
-            <Button type="submit" className="w-full" loading={loading}>
+            <Button type="submit" className="w-full" loading={isSubmitting}>
               Sign in
             </Button>
           </form>

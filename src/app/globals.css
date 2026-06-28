@@ -34,3 +34,17 @@ html, body {
   background-color: #09090B;
   color: #FAFAFA;
 }
+
+/* Highlight.js dark theme for syntax-highlighted code blocks */
+.hljs { background: #18181B; color: #e4e4e7; }
+.hljs-comment, .hljs-quote { color: #52525b; font-style: italic; }
+.hljs-keyword, .hljs-selector-tag, .hljs-built_in { color: #818cf8; }
+.hljs-string, .hljs-attr, .hljs-template-variable { color: #34d399; }
+.hljs-number, .hljs-literal { color: #fb923c; }
+.hljs-title, .hljs-section, .hljs-name { color: #60a5fa; }
+.hljs-type, .hljs-class .hljs-title { color: #c084fc; }
+.hljs-tag, .hljs-variable { color: #e4e4e7; }
+.hljs-deletion { color: #ef4444; }
+.hljs-addition { color: #10b981; }
+.hljs-emphasis { font-style: italic; }
+.hljs-strong { font-weight: bold; }

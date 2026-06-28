@@ -6,11 +6,19 @@ import type { ChatResponse } from "@/types/api"
 import { ToolCallTrace } from "./ToolCallTrace"
 import { ConfirmationCard } from "./ConfirmationCard"
 import ReactMarkdown from "react-markdown"
+import rehypeHighlight from "rehype-highlight"
 
 interface MessageBubbleProps {
   message: ChatMessage
   onConfirmApprove?: (response: ChatResponse) => void
   onConfirmCancel?: () => void
+}
+
+// Transform [Jira: PROJ-47] and [GitHub: PR#61] → special markdown links
+function preprocessBadges(content: string): string {
+  return content
+    .replace(/\[Jira: ([A-Z]+-\d+)\]/g, '[badge:jira:$1](jira:$1)')
+    .replace(/\[GitHub: PR#(\d+)\]/g, '[badge:github:$1](github:pr$1)')
 }
 
 export function MessageBubble({ message, onConfirmApprove, onConfirmCancel }: MessageBubbleProps) {
@@ -30,6 +38,7 @@ export function MessageBubble({ message, onConfirmApprove, onConfirmCancel }: Me
           ) : (
             <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <ReactMarkdown
+                rehypePlugins={[rehypeHighlight]}
                 components={{
                   code({ children, className, ...props }) {
                     const isInline = !className
@@ -38,12 +47,40 @@ export function MessageBubble({ message, onConfirmApprove, onConfirmCancel }: Me
                         {children}
                       </code>
                     ) : (
-                      <code className={cn("block bg-bg-elevated rounded-lg p-3 text-xs font-mono overflow-x-auto", className)} {...props}>
+                      <code className={cn("block bg-bg-elevated rounded-lg p-3 text-xs font-mono overflow-x-auto hljs", className)} {...props}>
                         {children}
                       </code>
                     )
                   },
-                  a({ children, href }) {
+                  a({ href, children }) {
+                    // Source badge: jira:PROJ-47
+                    if (href?.startsWith('jira:')) {
+                      const key = href.replace('jira:', '')
+                      return (
+                        <a
+                          href={`https://jira.atlassian.com/browse/${key}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-full bg-accent-from/10 border border-accent-from/20 px-2 py-0.5 text-xs font-mono text-accent-from hover:bg-accent-from/20 transition-colors no-underline"
+                        >
+                          Jira: {key}
+                        </a>
+                      )
+                    }
+                    // Source badge: github:prNN
+                    if (href?.startsWith('github:pr')) {
+                      const num = href.replace('github:pr', '')
+                      return (
+                        <a
+                          href={`https://github.com/pulls/${num}`}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-full bg-orange-500/10 border border-orange-500/20 px-2 py-0.5 text-xs font-mono text-orange-400 hover:bg-orange-500/20 transition-colors no-underline"
+                        >
+                          GitHub: PR#{num}
+                        </a>
+                      )
+                    }
                     return (
                       <a href={href} target="_blank" rel="noopener noreferrer" className="text-accent-from hover:underline">
                         {children}
@@ -67,7 +104,7 @@ export function MessageBubble({ message, onConfirmApprove, onConfirmCancel }: Me
                   h3({ children }) { return <h3 className="text-sm font-medium text-text-primary mb-1">{children}</h3> },
                 }}
               >
-                {message.content}
+                {preprocessBadges(message.content)}
               </ReactMarkdown>
             </div>
           )}

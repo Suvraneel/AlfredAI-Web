@@ -1,7 +1,9 @@
 'use client'
 import { useState } from "react"
 import { Sidebar } from "./Sidebar"
+import { BottomNav } from "./BottomNav"
 import { CommandPalette } from "./CommandPalette"
+import { PageTransition } from "./PageTransition"
 import { cn } from "@/lib/utils"
 
 interface AppShellProps {
@@ -13,7 +15,7 @@ export function AppShell({ children }: AppShellProps) {
 
   return (
     <div className="flex h-full bg-bg-base">
-      {/* Sidebar */}
+      {/* Sidebar — desktop only */}
       <div className={cn(
         "hidden lg:flex flex-col flex-shrink-0 h-full transition-all duration-250",
         sidebarCollapsed ? "w-14" : "w-60"
@@ -21,10 +23,13 @@ export function AppShell({ children }: AppShellProps) {
         <Sidebar collapsed={sidebarCollapsed} />
       </div>
 
-      {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
+      {/* Main content with page transitions */}
+      <PageTransition>
         {children}
-      </div>
+      </PageTransition>
+
+      {/* Mobile bottom nav */}
+      <BottomNav />
 
       {/* Command palette */}
       <CommandPalette />

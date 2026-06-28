@@ -2,6 +2,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import { mockJiraIssues } from '@/mock/jira'
 import { mockConversations } from '@/mock/conversations'
+import { useAuth } from '@/contexts/AuthContext'
 
 export interface CommandItem {
   id: string
@@ -14,6 +15,7 @@ export interface CommandItem {
 }
 
 export function useCommandPalette() {
+  const { user } = useAuth()
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
 
@@ -41,6 +43,9 @@ export function useCommandPalette() {
     { id: 'agents', type: 'command', label: 'View Agents', href: '/agents' },
     { id: 'audit', type: 'command', label: 'View Audit Log', href: '/audit' },
     { id: 'connect-jira', type: 'command', label: 'Connect Jira', href: '/settings/connections' },
+    ...(user?.role === 'admin' ? [
+      { id: 'invite-team', type: 'command' as const, label: 'Invite Team Member', description: 'Add a new team member', href: '/settings/team' },
+    ] : []),
     { id: 'profile', type: 'command', label: 'Profile Settings', href: '/settings/profile' },
   ]
 

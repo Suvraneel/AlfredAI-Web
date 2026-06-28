@@ -1,5 +1,8 @@
 'use client'
 import { useState, useEffect } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { z } from "zod"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,15 +13,32 @@ import { getAtlassianId, setAtlassianId, getTenantId } from "@/lib/auth"
 import { Copy, Check, User } from "lucide-react"
 import { toast } from "sonner"
 
+const passwordSchema = z.object({
+  currentPassword: z.string().min(1, "Current password required"),
+  newPassword: z.string().min(12, "New password must be at least 12 characters"),
+  confirmPassword: z.string(),
+}).refine(d => d.newPassword === d.confirmPassword, {
+  message: "Passwords do not match",
+  path: ["confirmPassword"],
+})
+
+type PasswordFormValues = z.infer<typeof passwordSchema>
+
 export default function ProfilePage() {
   const { user } = useAuth()
   const [atlassianId, setAtlassianIdState] = useState('')
-  const [currentPassword, setCurrentPassword] = useState('')
-  const [newPassword, setNewPassword] = useState('')
-  const [confirmPassword, setConfirmPassword] = useState('')
   const [savingAtlassian, setSavingAtlassian] = useState(false)
-  const [savingPassword, setSavingPassword] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
+
+  const {
+    register,
+    handleSubmit,
+    reset,
+    formState: { errors, isSubmitting },
+  } = useForm<PasswordFormValues>({
+    resolver: zodResolver(passwordSchema),
+    defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
+  })
 
   useEffect(() => {
     const id = getAtlassianId()
@@ -31,32 +51,20 @@ export default function ProfilePage() {
     setTimeout(() => setCopied(null), 2000)
   }
 
-  const saveAtlassianId = () => {
+  const saveAtlassianIdHandler = () => {
+    setSavingAtlassian(true)
     setAtlassianId(atlassianId)
     toast.success("Atlassian Account ID saved")
+    setSavingAtlassian(false)
   }
 
-  const savePassword = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (newPassword.length < 12) {
-      toast.error("Password must be at least 12 characters")
-      return
-    }
-    if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match")
-      return
-    }
-    setSavingPassword(true)
+  const onPasswordSubmit = async (data: PasswordFormValues) => {
     try {
-      await updatePassword(currentPassword, newPassword)
+      await updatePassword(data.currentPassword, data.newPassword)
       toast.success("Password updated")
-      setCurrentPassword('')
-      setNewPassword('')
-      setConfirmPassword('')
+      reset()
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Failed to update password")
-    } finally {
-      setSavingPassword(false)
     }
   }
 
@@ -118,7 +126,7 @@ export default function ProfilePage() {
               <Input
                 value={atlassianId}
                 onChange={e => setAtlassianIdState(e.target.value)}
-                onBlur={saveAtlassianId}
+                onBlur={saveAtlassianIdHandler}
                 placeholder="712020:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 className="font-mono text-xs"
               />
@@ -127,7 +135,7 @@ export default function ProfilePage() {
               </p>
             </div>
 
-            <Button size="sm" onClick={saveAtlassianId}>
+            <Button size="sm" onClick={saveAtlassianIdHandler} loading={savingAtlassian}>
               Save Atlassian ID
             </Button>
           </div>
@@ -136,38 +144,23 @@ export default function ProfilePage() {
           <div className="rounded-xl border border-border bg-bg-surface p-5 space-y-4">
             <h2 className="text-sm font-semibold text-text-primary">Change Password</h2>
 
-            <form onSubmit={savePassword} className="space-y-3">
+            <form onSubmit={handleSubmit(onPasswordSubmit)} className="space-y-3">
               <div className="space-y-1.5">
                 <Label htmlFor="currentPassword">Current password</Label>
-                <Input
-                  id="currentPassword"
-                  type="password"
-                  value={currentPassword}
-                  onChange={e => setCurrentPassword(e.target.value)}
-                  placeholder="Current password"
-                />
+                <Input id="currentPassword" type="password" placeholder="Current password" {...register('currentPassword')} />
+                {errors.currentPassword && <p className="text-xs text-error">{errors.currentPassword.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="newPassword">New password</Label>
-                <Input
-                  id="newPassword"
-                  type="password"
-                  value={newPassword}
-                  onChange={e => setNewPassword(e.target.value)}
-                  placeholder="Min 12 characters"
-                />
+                <Input id="newPassword" type="password" placeholder="Min 12 characters" {...register('newPassword')} />
+                {errors.newPassword && <p className="text-xs text-error">{errors.newPassword.message}</p>}
               </div>
               <div className="space-y-1.5">
                 <Label htmlFor="confirmPassword">Confirm new password</Label>
-                <Input
-                  id="confirmPassword"
-                  type="password"
-                  value={confirmPassword}
-                  onChange={e => setConfirmPassword(e.target.value)}
-                  placeholder="Repeat new password"
-                />
+                <Input id="confirmPassword" type="password" placeholder="Repeat new password" {...register('confirmPassword')} />
+                {errors.confirmPassword && <p className="text-xs text-error">{errors.confirmPassword.message}</p>}
               </div>
-              <Button type="submit" size="sm" loading={savingPassword}>
+              <Button type="submit" size="sm" loading={isSubmitting}>
                 Update password
               </Button>
             </form>
