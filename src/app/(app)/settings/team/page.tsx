@@ -16,7 +16,7 @@ import { EmptyState } from "@/components/shared/EmptyState"
 import { formatDate } from "@/lib/utils"
 import type { UserProfile } from "@/types/api"
 import { Users, UserPlus, Copy, Check, Lock } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 
 const inviteSchema = z.object({
   email: z.string().email("Valid email required"),

@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { getConnectionAuthorizeUrl, disconnectTool } from "@/lib/api"
 import { formatDate } from "@/lib/utils"
 import { Settings, RefreshCw, Unplug, Plug, Lock } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 
 const TOOL_NAMES = { jira: 'Jira', github: 'GitHub', slack: 'Slack', confluence: 'Confluence', asana: 'Asana' }
 

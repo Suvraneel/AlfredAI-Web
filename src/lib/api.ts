@@ -1,3 +1,4 @@
+import { toast } from './toast'
 import { getAccessToken, getRefreshToken, getTenantId, clearAuth, setAuthTokens } from './auth'
 import type { UserProfile, ToolConnection, ChatResponse, AuditLogItem, PaginatedResponse, InviteUserResponse } from '@/types/api'
 
@@ -33,7 +34,13 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
     ...(options.headers as Record<string, string> || {}),
   }
 
-  let response = await fetch(`${API}${path}`, { ...options, headers })
+  let response: Response
+  try {
+    response = await fetch(`${API}${path}`, { ...options, headers })
+  } catch {
+    toast.error("Can't reach the server. Check your connection.")
+    throw new Error('Network error')
+  }
 
   if (response.status === 401) {
     const body = await response.clone().json().catch(() => ({}))
@@ -45,10 +52,15 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
         if (newToken) {
           refreshQueue.forEach(cb => cb(newToken))
           refreshQueue = []
-          response = await fetch(`${API}${path}`, {
-            ...options,
-            headers: { ...headers, Authorization: `Bearer ${newToken}` },
-          })
+          try {
+            response = await fetch(`${API}${path}`, {
+              ...options,
+              headers: { ...headers, Authorization: `Bearer ${newToken}` },
+            })
+          } catch {
+            toast.error("Can't reach the server. Check your connection.")
+            throw new Error('Network error')
+          }
         } else {
           clearAuth()
           if (typeof window !== 'undefined') window.location.href = '/login'
@@ -56,12 +68,33 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
       } else {
         await new Promise<string>(resolve => refreshQueue.push(resolve))
         const newToken = getAccessToken()!
-        response = await fetch(`${API}${path}`, {
-          ...options,
-          headers: { ...headers, Authorization: `Bearer ${newToken}` },
-        })
+        try {
+          response = await fetch(`${API}${path}`, {
+            ...options,
+            headers: { ...headers, Authorization: `Bearer ${newToken}` },
+          })
+        } catch {
+          toast.error("Can't reach the server. Check your connection.")
+          throw new Error('Network error')
+        }
       }
     }
+  }
+
+  // Centralized HTTP error toasts
+  if (response.status === 403) {
+    toast.error("You don't have permission to do that.")
+  } else if (response.status === 409) {
+    const body = await response.clone().json().catch(() => ({}))
+    toast.error(body.detail || 'Conflict error.')
+  } else if (response.status === 424) {
+    const body = await response.clone().json().catch(() => ({}))
+    const tool = body.detail?.match(/(\w+)/)?.[1] || 'the required tool'
+    toast.error(`Connect ${tool} first to use this feature.`, {
+      action: { label: 'Integrations', onClick: () => { if (typeof window !== 'undefined') window.location.href = '/integrations' } },
+    })
+  } else if (response.status === 503) {
+    toast.error('AlfredAI is temporarily unavailable. Try again shortly.')
   }
 
   return response

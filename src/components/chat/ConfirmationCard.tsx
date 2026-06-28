@@ -6,7 +6,7 @@ import { cn } from "@/lib/utils"
 import { formatCountdown } from "@/lib/utils"
 import type { ConfirmationRequest } from "@/types/api"
 import { confirmAction, cancelAction } from "@/lib/api"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 
 interface ConfirmationCardProps {
   confirmation: ConfirmationRequest

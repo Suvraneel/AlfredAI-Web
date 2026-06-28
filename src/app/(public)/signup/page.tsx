@@ -11,7 +11,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { slugify } from "@/lib/utils"
 import { Copy, Check, ChevronDown, Eye, EyeOff } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import { useState } from "react"
 
 function PasswordStrengthBar({ password }: { password: string }) {

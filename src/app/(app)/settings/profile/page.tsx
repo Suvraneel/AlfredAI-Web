@@ -11,7 +11,7 @@ import { Badge } from "@/components/ui/badge"
 import { updatePassword } from "@/lib/api"
 import { getAtlassianId, setAtlassianId, getTenantId } from "@/lib/auth"
 import { Copy, Check, User } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 
 const passwordSchema = z.object({
   currentPassword: z.string().min(1, "Current password required"),

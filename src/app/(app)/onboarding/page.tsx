@@ -7,7 +7,7 @@ import { Label } from "@/components/ui/label"
 import { getConnectionAuthorizeUrl } from "@/lib/api"
 import { setAtlassianId, getAtlassianId } from "@/lib/auth"
 import { CheckCircle2, ArrowRight } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 
 function OnboardingContent() {
   const router = useRouter()

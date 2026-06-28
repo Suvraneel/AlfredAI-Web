@@ -9,7 +9,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, Di
 import { getConnectionAuthorizeUrl, disconnectTool } from "@/lib/api"
 import { formatDate } from "@/lib/utils"
 import { Lock, RefreshCw, Unplug, Plug } from "lucide-react"
-import { toast } from "sonner"
+import { toast } from "@/lib/toast"
 import { Plug as PlugIcon } from "lucide-react"
 
 const TOOL_META = {
