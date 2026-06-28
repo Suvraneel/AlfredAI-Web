@@ -102,9 +102,9 @@ export const mockConversations: MockConversation[] = [
         role: 'assistant',
         content: `Here's the current status of the auth refactor:
 
-**PROJ-47 — Add OAuth2 login flow** is currently *In Review* and assigned to **Sarah Chen** (Sprint 14).
+[Jira: PROJ-47] is currently *In Review* and assigned to **Sarah Chen** (Sprint 14).
 
-The linked PR **#61 "feat: OAuth2 login flow"** has received **2 approvals** (alex-kim and marcus-lee) and is ready to merge.
+The linked [GitHub: PR#61] has received **2 approvals** (alex-kim and marcus-lee) and is ready to merge.
 
 Key notes:
 - OAuth2 callback handler implemented ✓
@@ -169,13 +169,13 @@ Key notes:
         role: 'assistant',
         content: `Here's what's blocking Sprint 14:
 
-**🔴 PROJ-52 — Fix memory leak in worker process** (Blocked)
-- Blocked by: **PROJ-31** (Refactor database connection pooling)
+**🔴** [Jira: PROJ-52] **Fix memory leak in worker process** (Blocked)
+- Blocked by: [Jira: PROJ-31] (Refactor database connection pooling)
 - Assignee: Marcus Lee
 - PROJ-31 is In Progress — Marcus estimates completion by end of week
 
-**⚠️ PROJ-47 — Add OAuth2 login flow** (In Review)
-- PR #61 has 2 approvals but hasn't been merged yet
+**⚠️** [Jira: PROJ-47] **Add OAuth2 login flow** (In Review)
+- [GitHub: PR#61] has 2 approvals but hasn't been merged yet
 - Not technically blocked, but needs action from the team
 
 **Summary:** 1 hard blocker (PROJ-52 waiting on PROJ-31), 1 soft blocker (PR needs merge).`,

@@ -39,6 +39,7 @@ export function MessageBubble({ message, onConfirmApprove, onConfirmCancel }: Me
             <div className="prose prose-invert prose-sm max-w-none [&>*:first-child]:mt-0 [&>*:last-child]:mb-0">
               <ReactMarkdown
                 rehypePlugins={[rehypeHighlight]}
+                urlTransform={(url) => url}
                 components={{
                   code({ children, className, ...props }) {
                     const isInline = !className

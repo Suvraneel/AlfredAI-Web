@@ -3,6 +3,7 @@ import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { AppShell } from "@/components/layout/AppShell"
+import { ConversationProvider } from "@/contexts/ConversationContext"
 
 export default function AppLayout({ children }: { children: React.ReactNode }) {
   const { user, isLoading } = useAuth()
@@ -33,5 +34,9 @@ export default function AppLayout({ children }: { children: React.ReactNode }) {
 
   if (!user) return null
 
-  return <AppShell>{children}</AppShell>
+  return (
+    <ConversationProvider>
+      <AppShell>{children}</AppShell>
+    </ConversationProvider>
+  )
 }

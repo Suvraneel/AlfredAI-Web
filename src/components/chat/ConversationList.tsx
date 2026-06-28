@@ -3,11 +3,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { formatRelativeTime, truncate } from "@/lib/utils"
-import { mockConversations } from "@/mock/conversations"
+import { useConversations } from "@/contexts/ConversationContext"
 import { Plus } from "lucide-react"
 
 export function ConversationList({ onNewChat }: { onNewChat?: () => void }) {
   const pathname = usePathname()
+  const { conversations } = useConversations()
 
   return (
     <div className="flex flex-col h-full">
@@ -22,7 +23,7 @@ export function ConversationList({ onNewChat }: { onNewChat?: () => void }) {
       </div>
 
       <div className="flex-1 overflow-y-auto px-2 space-y-0.5 pb-2">
-        {mockConversations.map(conv => {
+        {conversations.map(conv => {
           const active = pathname === `/chat/${conv.id}`
           return (
             <Link
