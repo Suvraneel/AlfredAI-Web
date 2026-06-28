@@ -186,16 +186,18 @@ export async function getConnections(): Promise<{ connections: ToolConnection[] 
   return res.json()
 }
 
-export async function getConnectionAuthorizeUrl(tool: 'jira' | 'github'): Promise<{ authorization_url: string }> {
-  const path = tool === 'jira'
-    ? '/v1/connections/jira/authorize?redirect=false'
-    : '/v1/connections/github/authorize'
-  const res = await apiFetch(path)
+export async function getConnectionAuthorizeUrl(tool: 'jira' | 'github' | 'confluence'): Promise<{ authorization_url: string }> {
+  const paths: Record<string, string> = {
+    jira: '/v1/connections/jira/authorize?redirect=false',
+    github: '/v1/connections/github/authorize',
+    confluence: '/v1/connections/confluence/authorize?redirect=false',
+  }
+  const res = await apiFetch(paths[tool])
   if (!res.ok) throw new Error(`Failed to get ${tool} authorization URL`)
   return res.json()
 }
 
-export async function disconnectTool(tool: 'jira' | 'github') {
+export async function disconnectTool(tool: 'jira' | 'github' | 'confluence') {
   const res = await apiFetch(`/v1/connections/${tool}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`Failed to disconnect ${tool}`)
   return res.json()

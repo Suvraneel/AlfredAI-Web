@@ -16,7 +16,7 @@ const TOOL_META = {
   jira: { name: 'Jira', vendor: 'Atlassian', description: 'Issues, sprints, and backlogs', color: '#6366F1', connectable: true },
   github: { name: 'GitHub', vendor: 'GitHub Inc.', description: 'PRs, commits, and reviews', color: '#F59E0B', connectable: true },
   slack: { name: 'Slack', vendor: 'Salesforce', description: 'Channels, messages, and notifications', color: '#10B981', connectable: false },
-  confluence: { name: 'Confluence', vendor: 'Atlassian', description: 'Docs, pages, and knowledge base', color: '#6366F1', connectable: false },
+  confluence: { name: 'Confluence', vendor: 'Atlassian', description: 'Docs, pages, and knowledge base', color: '#6366F1', connectable: true },
   asana: { name: 'Asana', vendor: 'Asana Inc.', description: 'Tasks, projects, and timelines', color: '#F59E0B', connectable: false },
 }
 
@@ -25,11 +25,11 @@ const ALL_TOOLS = Object.keys(TOOL_META) as (keyof typeof TOOL_META)[]
 export default function IntegrationsPage() {
   const { connections, isLoading, refetch } = useConnections()
   const { user } = useAuth()
-  const [disconnectTarget, setDisconnectTarget] = useState<'jira' | 'github' | null>(null)
+  const [disconnectTarget, setDisconnectTarget] = useState<'jira' | 'github' | 'confluence' | null>(null)
   const [disconnecting, setDisconnecting] = useState(false)
   const [connecting, setConnecting] = useState<string | null>(null)
 
-  const handleConnect = async (tool: 'jira' | 'github') => {
+  const handleConnect = async (tool: 'jira' | 'github' | 'confluence') => {
     setConnecting(tool)
     try {
       const { authorization_url } = await getConnectionAuthorizeUrl(tool)
@@ -137,7 +137,7 @@ export default function IntegrationsPage() {
                                 size="sm"
                                 variant="outline"
                                 className="flex-1 gap-1.5"
-                                onClick={() => handleConnect(conn.tool as 'jira' | 'github')}
+                                onClick={() => handleConnect(conn.tool as 'jira' | 'github' | 'confluence')}
                                 loading={connecting === conn.tool}
                               >
                                 <RefreshCw className="h-3 w-3" />
@@ -148,7 +148,7 @@ export default function IntegrationsPage() {
                                   size="sm"
                                   variant="outline"
                                   className="flex-1 gap-1.5 border-error/30 text-error hover:bg-error/5"
-                                  onClick={() => setDisconnectTarget(conn.tool as 'jira' | 'github')}
+                                  onClick={() => setDisconnectTarget(conn.tool as 'jira' | 'github' | 'confluence')}
                                 >
                                   <Unplug className="h-3 w-3" />
                                   Disconnect
@@ -159,7 +159,7 @@ export default function IntegrationsPage() {
                             <Button
                               size="sm"
                               className="w-full gap-1.5"
-                              onClick={() => handleConnect(conn.tool as 'jira' | 'github')}
+                              onClick={() => handleConnect(conn.tool as 'jira' | 'github' | 'confluence')}
                               loading={connecting === conn.tool}
                             >
                               <Plug className="h-3 w-3" />

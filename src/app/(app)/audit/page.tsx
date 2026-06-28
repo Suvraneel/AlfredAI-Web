@@ -17,6 +17,11 @@ const ACTION_LABELS: Record<string, string> = {
   'jira.issue.comment': 'Added comment',
   'jira.issue.assign': 'Assigned issue',
   'jira.issue.update': 'Updated issue',
+  'confluence.page.create': 'Created page',
+  'confluence.page.update': 'Updated page',
+  'confluence.page.comment': 'Added comment',
+  'confluence.space.create': 'Created space',
+  'confluence.page.link_jira': 'Linked Jira issue',
 }
 
 const LIMIT = 50
@@ -71,6 +76,7 @@ export default function AuditPage() {
               <SelectItem value="all">All tools</SelectItem>
               <SelectItem value="jira">Jira</SelectItem>
               <SelectItem value="github">GitHub</SelectItem>
+              <SelectItem value="confluence">Confluence</SelectItem>
             </SelectContent>
           </Select>
 
