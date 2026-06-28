@@ -23,7 +23,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({ conversationId, initialQuery }: ChatWindowProps) {
   const router = useRouter()
-  const { messages, isStreaming, streamingMessage, elapsedSeconds, sendMessage, clearChat, setMessages } = useChat(conversationId)
+  const { messages, conversationId: activeConvId, isStreaming, streamingMessage, elapsedSeconds, sendMessage, clearChat, setMessages } = useChat(conversationId)
   const bottomRef = useRef<HTMLDivElement>(null)
   const didSendInitial = useRef(false)
 
@@ -37,6 +37,13 @@ export function ChatWindow({ conversationId, initialQuery }: ChatWindowProps) {
       sendMessage(initialQuery)
     }
   }, [initialQuery, conversationId, sendMessage])
+
+  // Update URL to /chat/[id] once first AI response creates a conversation
+  useEffect(() => {
+    if (activeConvId && !conversationId) {
+      router.replace(`/chat/${activeConvId}`, { scroll: false })
+    }
+  }, [activeConvId, conversationId, router])
 
   const handleNewChat = () => {
     clearChat()

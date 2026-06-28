@@ -13,6 +13,7 @@ interface Node {
   label: string
   summary?: string
   status?: string
+  assignee?: string
   x: number
   y: number
 }
@@ -45,6 +46,7 @@ function buildGraph(): { nodes: Node[]; edges: Edge[] } {
       label: issue.key,
       summary: issue.summary,
       status: issue.status,
+      assignee: issue.assignee ?? undefined,
       x: 400 + r * Math.cos(angle),
       y: 350 + r * Math.sin(angle),
     })
@@ -97,6 +99,7 @@ export default function KnowledgePage() {
   const svgRef = useRef<SVGSVGElement>(null)
   const [{ nodes, edges }] = useState(buildGraph)
   const [selected, setSelected] = useState<Node | null>(null)
+  const [hovered, setHovered] = useState<{ node: Node; x: number; y: number } | null>(null)
   const [search, setSearch] = useState('')
   const [transform, setTransform] = useState({ x: 0, y: 0, scale: 1 })
   const isPanning = useRef(false)
@@ -212,6 +215,9 @@ export default function KnowledgePage() {
                 className="node-group cursor-pointer"
                 transform={`translate(${node.x},${node.y})`}
                 onClick={() => setSelected(selected?.id === node.id ? null : node)}
+                onMouseEnter={e => setHovered({ node, x: e.clientX, y: e.clientY })}
+                onMouseMove={e => setHovered(h => h ? { ...h, x: e.clientX, y: e.clientY } : null)}
+                onMouseLeave={() => setHovered(null)}
                 style={{ opacity: dimmed ? 0.2 : 1 }}
               >
                 <circle
@@ -244,6 +250,25 @@ export default function KnowledgePage() {
           })}
         </g>
       </svg>
+
+      {/* Hover tooltip */}
+      {hovered && (
+        <div
+          className="pointer-events-none fixed z-50 rounded-lg border border-border bg-bg-elevated/95 backdrop-blur-md px-3 py-2 shadow-xl text-xs space-y-1 max-w-[200px]"
+          style={{ left: hovered.x + 12, top: hovered.y - 8 }}
+        >
+          <p className="font-mono font-semibold text-text-primary">{hovered.node.label}</p>
+          {hovered.node.summary && (
+            <p className="text-text-secondary leading-relaxed">{hovered.node.summary.slice(0, 60)}{hovered.node.summary.length > 60 ? '…' : ''}</p>
+          )}
+          {hovered.node.status && (
+            <p className="text-text-muted">Status: <span className="text-text-secondary">{hovered.node.status}</span></p>
+          )}
+          {hovered.node.assignee && (
+            <p className="text-text-muted">Assignee: <span className="text-text-secondary">{hovered.node.assignee}</span></p>
+          )}
+        </div>
+      )}
 
       {/* Detail panel */}
       <AnimatePresence>
