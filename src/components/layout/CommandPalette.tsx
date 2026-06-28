@@ -93,7 +93,7 @@ export function CommandPalette() {
                       <div className="flex-1 min-w-0">
                         <span className={cn(
                           "text-sm",
-                          item.type === 'jira' ? "font-mono text-accent-from" : "text-text-primary"
+                          "text-text-primary"
                         )}>
                           {item.label}
                         </span>

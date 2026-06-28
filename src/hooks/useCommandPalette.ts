@@ -1,12 +1,11 @@
 'use client'
 import { useState, useEffect, useCallback } from 'react'
-import { mockJiraIssues } from '@/mock/jira'
-import { mockConversations } from '@/mock/conversations'
 import { useAuth } from '@/contexts/AuthContext'
+import { useConversations } from '@/contexts/ConversationContext'
 
 export interface CommandItem {
   id: string
-  type: 'command' | 'jira' | 'conversation'
+  type: 'command' | 'conversation'
   label: string
   description?: string
   href?: string
@@ -16,6 +15,7 @@ export interface CommandItem {
 
 export function useCommandPalette() {
   const { user } = useAuth()
+  const { conversations } = useConversations()
   const [isOpen, setIsOpen] = useState(false)
   const [query, setQuery] = useState('')
 
@@ -49,24 +49,15 @@ export function useCommandPalette() {
     { id: 'profile', type: 'command', label: 'Profile Settings', href: '/settings/profile' },
   ]
 
-  const jiraItems: CommandItem[] = mockJiraIssues.map(issue => ({
-    id: `jira-${issue.key}`,
-    type: 'jira',
-    label: issue.key,
-    description: issue.summary,
-    badge: issue.status,
-    href: `/chat?q=Tell me about ${issue.key}`,
-  }))
-
-  const convItems: CommandItem[] = mockConversations.map(c => ({
+  const convItems: CommandItem[] = conversations.map(c => ({
     id: `conv-${c.id}`,
     type: 'conversation',
     label: c.title,
-    description: `${new Date(c.created_at).toLocaleDateString()}`,
+    description: new Date(c.created_at).toLocaleDateString(),
     href: `/chat/${c.id}`,
   }))
 
-  const allItems = [...staticCommands, ...jiraItems, ...convItems]
+  const allItems = [...staticCommands, ...convItems]
   const filtered = query
     ? allItems.filter(
         item =>

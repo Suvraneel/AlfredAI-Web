@@ -28,7 +28,6 @@ export default function AuditPage() {
   const [offset, setOffset] = useState(0)
   const [loading, setLoading] = useState(true)
   const [toolFilter, setToolFilter] = useState<string>('all')
-  const [statusFilter, setStatusFilter] = useState<string>('all')
 
   const fetchAudit = async (newOffset = 0) => {
     setLoading(true)
@@ -38,7 +37,6 @@ export default function AuditPage() {
         offset: newOffset,
       }
       if (toolFilter !== 'all') params.tool = toolFilter
-      if (statusFilter !== 'all') params.status = statusFilter
 
       const data = await getAuditLog(params)
       setItems(data.items)
@@ -51,7 +49,7 @@ export default function AuditPage() {
     }
   }
 
-  useEffect(() => { fetchAudit(0) }, [toolFilter, statusFilter])
+  useEffect(() => { fetchAudit(0) }, [toolFilter])
 
   const totalPages = Math.ceil(total / LIMIT)
   const currentPage = Math.floor(offset / LIMIT) + 1
@@ -76,16 +74,6 @@ export default function AuditPage() {
             </SelectContent>
           </Select>
 
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-28 h-8 text-xs">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All status</SelectItem>
-              <SelectItem value="success">Success</SelectItem>
-              <SelectItem value="failure">Failure</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
       </div>
 

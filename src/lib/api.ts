@@ -3,7 +3,6 @@ import { getAccessToken, getRefreshToken, getTenantId, clearAuth, setAuthTokens 
 import type { UserProfile, ToolConnection, ChatResponse, AuditLogItem, PaginatedResponse, InviteUserResponse } from '@/types/api'
 
 const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000'
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
 
 let isRefreshing = false
 let refreshQueue: Array<(token: string) => void> = []
@@ -78,6 +77,10 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
           throw new Error('Network error')
         }
       }
+    } else {
+      toast.error('Session expired. Redirecting to login…')
+      clearAuth()
+      if (typeof window !== 'undefined') window.location.href = '/login'
     }
   }
 
@@ -102,15 +105,6 @@ export async function apiFetch(path: string, options: RequestInit = {}): Promise
 
 // Auth API
 export async function loginUser(email: string, tenantId: string, password: string) {
-  if (USE_MOCK) {
-    await new Promise(r => setTimeout(r, 800))
-    return {
-      access_token: 'mock_access_token',
-      refresh_token: 'mock_refresh_token',
-      token_type: 'bearer',
-      expires_in: 3600,
-    }
-  }
   const res = await fetch(`${API}/v1/auth/login`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -130,14 +124,6 @@ export async function registerTenant(data: {
   admin_password: string
   registration_secret: string
 }) {
-  if (USE_MOCK) {
-    await new Promise(r => setTimeout(r, 1000))
-    return {
-      tenant_id: 'mock-tenant-id-' + Date.now(),
-      access_token: 'mock_access_token',
-      token_type: 'bearer',
-    }
-  }
   const res = await fetch(`${API}/v1/tenants`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -151,7 +137,6 @@ export async function registerTenant(data: {
 }
 
 export async function logoutUser(refreshToken: string) {
-  if (USE_MOCK) return
   await apiFetch('/v1/auth/logout', {
     method: 'POST',
     body: JSON.stringify({ refresh_token: refreshToken }),
@@ -160,20 +145,12 @@ export async function logoutUser(refreshToken: string) {
 
 // Users API
 export async function getCurrentUser(): Promise<UserProfile> {
-  if (USE_MOCK) {
-    const { mockUser } = await import('@/mock/conversations')
-    return mockUser
-  }
   const res = await apiFetch('/v1/users/me')
   if (!res.ok) throw new Error('Failed to fetch user')
   return res.json()
 }
 
 export async function updatePassword(currentPassword: string, newPassword: string) {
-  if (USE_MOCK) {
-    await new Promise(r => setTimeout(r, 500))
-    return
-  }
   const res = await apiFetch('/v1/users/me', {
     method: 'PATCH',
     body: JSON.stringify({ current_password: currentPassword, new_password: newPassword }),
@@ -185,20 +162,12 @@ export async function updatePassword(currentPassword: string, newPassword: strin
 }
 
 export async function getUsers(limit = 50, offset = 0): Promise<PaginatedResponse<UserProfile>> {
-  if (USE_MOCK) {
-    const { mockUsers } = await import('@/mock/conversations')
-    return { total: mockUsers.length, items: mockUsers, next_offset: null }
-  }
   const res = await apiFetch(`/v1/users?limit=${limit}&offset=${offset}`)
   if (!res.ok) throw new Error('Failed to fetch users')
   return res.json()
 }
 
 export async function inviteUser(email: string, role: 'admin' | 'member'): Promise<InviteUserResponse> {
-  if (USE_MOCK) {
-    await new Promise(r => setTimeout(r, 500))
-    return { user_id: 'mock-user-' + Date.now(), email, temporary_password: 'TempPass123!@#' }
-  }
   const res = await apiFetch('/v1/users', {
     method: 'POST',
     body: JSON.stringify({ email, role }),
@@ -212,19 +181,12 @@ export async function inviteUser(email: string, role: 'admin' | 'member'): Promi
 
 // Connections API
 export async function getConnections(): Promise<{ connections: ToolConnection[] }> {
-  if (USE_MOCK) {
-    const { mockConnections } = await import('@/mock/conversations')
-    return { connections: mockConnections }
-  }
   const res = await apiFetch('/v1/connections')
   if (!res.ok) throw new Error('Failed to fetch connections')
   return res.json()
 }
 
 export async function getConnectionAuthorizeUrl(tool: 'jira' | 'github'): Promise<{ authorization_url: string }> {
-  if (USE_MOCK) {
-    return { authorization_url: `${window.location.origin}/onboarding?connected=${tool}` }
-  }
   const path = tool === 'jira'
     ? '/v1/connections/jira/authorize?redirect=false'
     : '/v1/connections/github/authorize'
@@ -234,10 +196,6 @@ export async function getConnectionAuthorizeUrl(tool: 'jira' | 'github'): Promis
 }
 
 export async function disconnectTool(tool: 'jira' | 'github') {
-  if (USE_MOCK) {
-    await new Promise(r => setTimeout(r, 500))
-    return { status: 'disconnected' }
-  }
   const res = await apiFetch(`/v1/connections/${tool}`, { method: 'DELETE' })
   if (!res.ok) throw new Error(`Failed to disconnect ${tool}`)
   return res.json()
@@ -253,17 +211,26 @@ export async function getAuditLog(params: {
   limit?: number
   offset?: number
 } = {}): Promise<PaginatedResponse<AuditLogItem>> {
-  if (USE_MOCK) {
-    const { mockAuditLog } = await import('@/mock/audit')
-    const items = mockAuditLog
-    return { total: items.length, items: items.slice(params.offset || 0, (params.offset || 0) + (params.limit || 50)), next_offset: null }
-  }
   const searchParams = new URLSearchParams()
   Object.entries(params).forEach(([k, v]) => {
     if (v !== undefined && v !== '') searchParams.set(k, String(v))
   })
   const res = await apiFetch(`/v1/audit?${searchParams}`)
   if (!res.ok) throw new Error('Failed to fetch audit log')
+  return res.json()
+}
+
+// Chat history
+export async function getConversationHistory(conversationId: string): Promise<{ conversation_id: string; messages: Array<{ role: 'user' | 'assistant'; content: string }> }> {
+  const res = await apiFetch(`/v1/chat/${encodeURIComponent(conversationId)}`)
+  if (!res.ok) throw new Error('Failed to fetch conversation history')
+  return res.json()
+}
+
+// Cross-tool context
+export async function getContext(jiraIssueKey: string): Promise<import('@/types/api').CrossToolContext> {
+  const res = await apiFetch(`/v1/context/${encodeURIComponent(jiraIssueKey)}`)
+  if (!res.ok) throw new Error('Failed to fetch context')
   return res.json()
 }
 

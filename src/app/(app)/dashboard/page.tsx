@@ -1,10 +1,11 @@
 'use client'
+import { useEffect, useState } from "react"
 import { useAuth } from "@/contexts/AuthContext"
-import { mockConversations } from "@/mock/conversations"
-import { mockJiraIssues } from "@/mock/jira"
-import { mockAuditLog } from "@/mock/audit"
+import { getAuditLog, getConnections } from "@/lib/api"
+import type { AuditLogItem, ToolConnection } from "@/types/api"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
+import { Skeleton } from "@/components/ui/skeleton"
 import { formatRelativeTime, formatDate } from "@/lib/utils"
 import { motion } from "framer-motion"
 import Link from "next/link"
@@ -20,8 +21,8 @@ const insights = [
     color: 'text-error',
     bgColor: 'bg-error/10',
     borderColor: 'border-error/20',
-    text: 'PROJ-52 is blocked — 14 days with no progress',
-    question: "Why is PROJ-52 blocked and how do I unblock it?",
+    text: 'Ask Alfred about blocked issues in your current sprint.',
+    question: "What's blocking our current sprint?",
     severity: 'error' as const,
   },
   {
@@ -29,8 +30,8 @@ const insights = [
     color: 'text-warning',
     bgColor: 'bg-warning/10',
     borderColor: 'border-warning/20',
-    text: 'PR #58 has an unreviewed change request for 3 days',
-    question: "What's the status of PR #58 and what changes were requested?",
+    text: 'Check for open PRs that need review.',
+    question: "Show me all open PRs needing review",
     severity: 'warning' as const,
   },
   {
@@ -38,27 +39,45 @@ const insights = [
     color: 'text-success',
     bgColor: 'bg-success/10',
     borderColor: 'border-success/20',
-    text: 'Sprint 14 is 78% complete — 2 days remaining',
-    question: "What's left in Sprint 14 and what are the risks?",
+    text: 'Summarize recent changes across your tools.',
+    question: "Summarize what changed in the last week",
     severity: 'success' as const,
   },
 ]
 
-const activityItems = [
-  { tool: 'jira', text: 'PROJ-47 moved to In Review by Sarah Chen', time: '2026-06-27T14:28:00Z', issueKey: 'PROJ-47' },
-  { tool: 'github', text: 'PR #61 approved by alex-kim', time: '2026-06-27T14:00:00Z', issueKey: null },
-  { tool: 'jira', text: 'PROJ-53 assigned to Sarah Chen', time: '2026-06-27T13:45:00Z', issueKey: 'PROJ-53' },
-  { tool: 'github', text: 'PR #62 opened by alex-kim', time: '2026-06-27T13:20:00Z', issueKey: null },
-  { tool: 'jira', text: 'PROJ-52 blocked by PROJ-31', time: '2026-06-27T13:10:00Z', issueKey: 'PROJ-52' },
-  { tool: 'jira', text: 'INFRA-12 updated by Alex Kim', time: '2026-06-27T12:00:00Z', issueKey: 'INFRA-12' },
-]
+const TOOL_LABELS: Record<string, string> = {
+  jira: 'Jira',
+  github: 'GitHub',
+  slack: 'Slack',
+  confluence: 'Confluence',
+  asana: 'Asana',
+}
 
 export default function DashboardPage() {
   const { user } = useAuth()
   const router = useRouter()
+  const [auditItems, setAuditItems] = useState<AuditLogItem[]>([])
+  const [connections, setConnections] = useState<ToolConnection[]>([])
+  const [loadingActivity, setLoadingActivity] = useState(true)
+  const [loadingConnections, setLoadingConnections] = useState(true)
+
   const firstName = user?.email?.split('@')[0]?.split('.')[0] || 'there'
   const hour = new Date().getHours()
   const greeting = hour < 12 ? 'Good morning' : hour < 17 ? 'Good afternoon' : 'Good evening'
+
+  useEffect(() => {
+    getAuditLog({ limit: 6 })
+      .then(r => setAuditItems(r.items))
+      .catch(() => {})
+      .finally(() => setLoadingActivity(false))
+  }, [])
+
+  useEffect(() => {
+    getConnections()
+      .then(r => setConnections(r.connections))
+      .catch(() => {})
+      .finally(() => setLoadingConnections(false))
+  }, [])
 
   const handleAskAlfred = (question: string) => {
     router.push(`/chat?q=${encodeURIComponent(question)}`)
@@ -101,24 +120,47 @@ export default function DashboardPage() {
                 <h2 className="text-sm font-medium text-text-primary">Activity</h2>
               </div>
               <div className="divide-y divide-border">
-                {activityItems.map((item, i) => (
-                  <div
-                    key={i}
-                    className="flex items-start gap-3 px-4 py-3 hover:bg-bg-subtle transition-colors cursor-pointer"
-                    onClick={() => item.issueKey && handleAskAlfred(`Tell me about ${item.issueKey}`)}
-                  >
-                    <div className={`mt-0.5 h-6 w-6 rounded-md flex items-center justify-center flex-shrink-0 text-xs font-bold ${
-                      item.tool === 'jira' ? 'bg-accent-from/10 text-accent-from' : 'bg-warning/10 text-warning'
-                    }`}>
-                      {item.tool === 'jira' ? 'J' : 'G'}
+                {loadingActivity ? (
+                  [...Array(4)].map((_, i) => (
+                    <div key={i} className="flex items-start gap-3 px-4 py-3">
+                      <Skeleton className="h-6 w-6 rounded-md flex-shrink-0" />
+                      <div className="flex-1 space-y-1.5">
+                        <Skeleton className="h-3 w-full rounded" />
+                        <Skeleton className="h-2.5 w-1/3 rounded" />
+                      </div>
                     </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs text-text-primary leading-relaxed">{item.text}</p>
-                      <p className="text-[10px] text-text-muted mt-0.5">{formatRelativeTime(item.time)}</p>
-                    </div>
+                  ))
+                ) : auditItems.length === 0 ? (
+                  <div className="px-4 py-8 text-center text-xs text-text-muted">
+                    No actions yet — Alfred logs every change it makes here.
                   </div>
-                ))}
+                ) : (
+                  auditItems.map((item) => (
+                    <div
+                      key={item.id}
+                      className="flex items-start gap-3 px-4 py-3 hover:bg-bg-subtle transition-colors"
+                    >
+                      <div className={`mt-0.5 h-6 w-6 rounded-md flex items-center justify-center flex-shrink-0 text-xs font-bold ${
+                        item.tool === 'jira' ? 'bg-accent-from/10 text-accent-from' : 'bg-warning/10 text-warning'
+                      }`}>
+                        {item.tool === 'jira' ? 'J' : 'G'}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs text-text-primary leading-relaxed truncate">
+                          <span className="capitalize">{item.action_type.replace(/\./g, ' ')}</span>
+                          {item.target_resource_id && <span className="text-accent-from"> {item.target_resource_id}</span>}
+                        </p>
+                        <p className="text-[10px] text-text-muted mt-0.5">{formatRelativeTime(item.created_at)}</p>
+                      </div>
+                    </div>
+                  ))
+                )}
               </div>
+              {auditItems.length > 0 && (
+                <div className="border-t border-border px-4 py-2">
+                  <Link href="/audit" className="text-xs text-accent-from hover:underline">View full audit log →</Link>
+                </div>
+              )}
             </div>
           </motion.div>
 
@@ -166,21 +208,29 @@ export default function DashboardPage() {
                 <h2 className="text-sm font-medium text-text-primary">Connections</h2>
               </div>
               <div className="p-4 space-y-2">
-                {[
-                  { name: 'Jira', status: 'active' as const },
-                  { name: 'GitHub', status: 'active' as const },
-                  { name: 'Slack', status: 'coming_soon' as const },
-                ].map(({ name, status }) => (
-                  <div key={name} className="flex items-center gap-2 text-sm">
-                    <span className={`h-2 w-2 rounded-full ${
-                      status === 'active' ? 'bg-success animate-pulse' : 'bg-text-muted'
-                    }`} />
-                    <span className="text-text-secondary">{name}</span>
-                    <span className="ml-auto text-xs text-text-muted">
-                      {status === 'active' ? 'Active' : 'Coming soon'}
-                    </span>
-                  </div>
-                ))}
+                {loadingConnections ? (
+                  [...Array(3)].map((_, i) => (
+                    <div key={i} className="flex items-center gap-2">
+                      <Skeleton className="h-2 w-2 rounded-full" />
+                      <Skeleton className="h-3 w-24 rounded" />
+                      <Skeleton className="h-3 w-16 rounded ml-auto" />
+                    </div>
+                  ))
+                ) : connections.length === 0 ? (
+                  <p className="text-xs text-text-muted">No connections yet.</p>
+                ) : (
+                  connections.map(({ tool, status }) => (
+                    <div key={tool} className="flex items-center gap-2 text-sm">
+                      <span className={`h-2 w-2 rounded-full flex-shrink-0 ${
+                        status === 'active' ? 'bg-success animate-pulse' : 'bg-text-muted'
+                      }`} />
+                      <span className="text-text-secondary">{TOOL_LABELS[tool] ?? tool}</span>
+                      <span className="ml-auto text-xs text-text-muted capitalize">
+                        {status === 'active' ? 'Active' : status === 'coming_soon' ? 'Coming soon' : status}
+                      </span>
+                    </div>
+                  ))
+                )}
                 <Link href="/settings/connections" className="block mt-3 text-xs text-accent-from hover:underline">
                   Manage connections →
                 </Link>

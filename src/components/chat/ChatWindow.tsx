@@ -5,8 +5,7 @@ import { MessageBubble } from "./MessageBubble"
 import { StreamingMessage } from "./StreamingMessage"
 import { ChatInput } from "./ChatInput"
 import { ConversationList } from "./ConversationList"
-import { EmptyState } from "@/components/shared/EmptyState"
-import { MessageSquare } from "lucide-react"
+import { Skeleton } from "@/components/ui/skeleton"
 import { useRouter } from "next/navigation"
 import type { ChatResponse } from "@/types/api"
 
@@ -23,7 +22,7 @@ interface ChatWindowProps {
 
 export function ChatWindow({ conversationId, initialQuery }: ChatWindowProps) {
   const router = useRouter()
-  const { messages, conversationId: activeConvId, isStreaming, streamingMessage, elapsedSeconds, sendMessage, clearChat, setMessages } = useChat(conversationId)
+  const { messages, conversationId: activeConvId, isStreaming, isLoadingHistory, streamingMessage, elapsedSeconds, sendMessage, clearChat, setMessages } = useChat(conversationId)
   const bottomRef = useRef<HTMLDivElement>(null)
   const didSendInitial = useRef(false)
 
@@ -85,7 +84,16 @@ export function ChatWindow({ conversationId, initialQuery }: ChatWindowProps) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Messages */}
         <div className="flex-1 overflow-y-auto px-4 py-6 space-y-4">
-          {messages.length === 0 ? (
+          {isLoadingHistory ? (
+            <div className="space-y-4 max-w-2xl mx-auto w-full">
+              {[...Array(4)].map((_, i) => (
+                <div key={i} className={`flex gap-3 ${i % 2 === 0 ? 'justify-end' : ''}`}>
+                  {i % 2 !== 0 && <Skeleton className="h-8 w-8 rounded-full flex-shrink-0" />}
+                  <Skeleton className={`h-16 rounded-xl ${i % 2 === 0 ? 'w-2/3' : 'w-3/4'}`} />
+                </div>
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex flex-col items-center justify-center h-full gap-6">
               <div className="flex flex-col items-center gap-3">
                 <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-gradient-to-br from-accent-from to-accent-to text-white text-xl font-bold shadow-[0_0_30px_rgba(99,102,241,0.2)]">

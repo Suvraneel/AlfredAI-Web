@@ -13,12 +13,14 @@ import { toast } from "@/lib/toast"
 import { Plug as PlugIcon } from "lucide-react"
 
 const TOOL_META = {
-  jira: { name: 'Jira', vendor: 'Atlassian', description: 'Issues, sprints, and backlogs', color: '#6366F1' },
-  github: { name: 'GitHub', vendor: 'GitHub Inc.', description: 'PRs, commits, and reviews', color: '#F59E0B' },
-  slack: { name: 'Slack', vendor: 'Salesforce', description: 'Channels, messages, and notifications', color: '#10B981' },
-  confluence: { name: 'Confluence', vendor: 'Atlassian', description: 'Docs, pages, and knowledge base', color: '#6366F1' },
-  asana: { name: 'Asana', vendor: 'Asana Inc.', description: 'Tasks, projects, and timelines', color: '#F59E0B' },
+  jira: { name: 'Jira', vendor: 'Atlassian', description: 'Issues, sprints, and backlogs', color: '#6366F1', connectable: true },
+  github: { name: 'GitHub', vendor: 'GitHub Inc.', description: 'PRs, commits, and reviews', color: '#F59E0B', connectable: true },
+  slack: { name: 'Slack', vendor: 'Salesforce', description: 'Channels, messages, and notifications', color: '#10B981', connectable: false },
+  confluence: { name: 'Confluence', vendor: 'Atlassian', description: 'Docs, pages, and knowledge base', color: '#6366F1', connectable: false },
+  asana: { name: 'Asana', vendor: 'Asana Inc.', description: 'Tasks, projects, and timelines', color: '#F59E0B', connectable: false },
 }
+
+const ALL_TOOLS = Object.keys(TOOL_META) as (keyof typeof TOOL_META)[]
 
 export default function IntegrationsPage() {
   const { connections, isLoading, refetch } = useConnections()
@@ -72,14 +74,15 @@ export default function IntegrationsPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-              {connections.map(conn => {
-                const meta = TOOL_META[conn.tool as keyof typeof TOOL_META]
-                if (!meta) return null
-                const isComingSoon = conn.status === 'coming_soon'
+              {ALL_TOOLS.map(toolKey => {
+                const meta = TOOL_META[toolKey]
+                const apiConn = connections.find(c => c.tool === toolKey)
+                const conn = apiConn ?? { tool: toolKey, status: meta.connectable ? 'disconnected' : 'coming_soon', connected_at: null, scopes: [], last_verified_at: null }
+                const isComingSoon = !meta.connectable
                 const isActive = conn.status === 'active'
 
                 return (
-                  <div key={conn.tool} className={`rounded-xl border bg-bg-surface p-5 flex flex-col gap-4 ${
+                  <div key={toolKey} className={`rounded-xl border bg-bg-surface p-5 flex flex-col gap-4 ${
                     isComingSoon ? 'opacity-60 border-border' : 'border-border hover:border-border-accent transition-colors'
                   }`}>
                     {/* Header */}

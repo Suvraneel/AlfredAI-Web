@@ -1,12 +1,10 @@
 'use client'
-import { useState, useRef, useCallback } from 'react'
+import { useState, useRef, useCallback, useEffect } from 'react'
 import type { ChatResponse } from '@/types/api'
 import { streamChat } from '@/lib/sse'
 import { getAtlassianId } from '@/lib/auth'
-import { mockConversations, type MockMessage } from '@/mock/conversations'
 import { useConversations } from '@/contexts/ConversationContext'
-
-const USE_MOCK = process.env.NEXT_PUBLIC_USE_MOCK === 'true'
+import { getConversationHistory } from '@/lib/api'
 
 export interface ChatMessage {
   id: string
@@ -20,19 +18,37 @@ export interface ChatMessage {
 
 export function useChat(initialConversationId?: string) {
   const { addConversation } = useConversations()
-  const [messages, setMessages] = useState<ChatMessage[]>(() => {
-    if (USE_MOCK && initialConversationId) {
-      const conv = mockConversations.find(c => c.id === initialConversationId)
-      return conv ? conv.messages as ChatMessage[] : []
-    }
-    return []
-  })
+  const [messages, setMessages] = useState<ChatMessage[]>([])
   const [conversationId, setConversationId] = useState<string | undefined>(initialConversationId)
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessage, setStreamingMessage] = useState<string>('')
   const [elapsedSeconds, setElapsedSeconds] = useState(0)
+  const [isLoadingHistory, setIsLoadingHistory] = useState(!!initialConversationId)
   const abortRef = useRef<AbortController | null>(null)
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null)
+
+  // Load history from backend when opening an existing conversation
+  useEffect(() => {
+    if (!initialConversationId) return
+    let cancelled = false
+
+    getConversationHistory(initialConversationId)
+      .then(data => {
+        if (cancelled) return
+        const loaded: ChatMessage[] = data.messages.map((m, i) => ({
+          id: `history-${i}-${m.role}`,
+          role: m.role,
+          content: m.content,
+          timestamp: new Date().toISOString(),
+          conversation_id: initialConversationId,
+        }))
+        setMessages(loaded)
+      })
+      .catch(() => {})
+      .finally(() => { if (!cancelled) setIsLoadingHistory(false) })
+
+    return () => { cancelled = true }
+  }, [initialConversationId])
 
   const startTimer = useCallback(() => {
     setElapsedSeconds(0)
@@ -58,39 +74,6 @@ export function useChat(initialConversationId?: string) {
     setIsStreaming(true)
     setStreamingMessage('Alfred is thinking')
     startTimer()
-
-    if (USE_MOCK) {
-      await new Promise(r => setTimeout(r, 1500))
-      const isNew = !conversationId
-      const newConvId = conversationId || `conv-mock-${Date.now()}`
-      const mockReply: ChatMessage = {
-        id: `msg-${Date.now()}-ai`,
-        role: 'assistant',
-        content: `I processed your request: "${content}"\n\nHere's what I found based on your Jira and GitHub data. This is a mock response — connect to the real backend for live data.\n\nRelated: [Jira: PROJ-47] [GitHub: PR#61]`,
-        timestamp: new Date().toISOString(),
-        tool_calls: [
-          { tool_name: 'jira_search_issues', arguments: { query: content }, result: 'Mock results', success: true, duration_ms: 234 },
-        ],
-        conversation_id: newConvId,
-      }
-      setConversationId(newConvId)
-      setMessages(prev => {
-        const updated = [...prev, mockReply]
-        if (isNew) {
-          addConversation({
-            id: newConvId,
-            title: content.slice(0, 60),
-            created_at: new Date().toISOString(),
-            messages: updated as MockMessage[],
-          })
-        }
-        return updated
-      })
-      setIsStreaming(false)
-      setStreamingMessage('')
-      stopTimer()
-      return
-    }
 
     const atlassianId = getAtlassianId() || ''
     abortRef.current = new AbortController()
@@ -124,7 +107,6 @@ export function useChat(initialConversationId?: string) {
                   id: response.conversation_id,
                   title: content.slice(0, 60),
                   created_at: new Date().toISOString(),
-                  messages: updated as MockMessage[],
                 })
               }
               return updated
@@ -171,6 +153,7 @@ export function useChat(initialConversationId?: string) {
     isStreaming,
     streamingMessage,
     elapsedSeconds,
+    isLoadingHistory,
     sendMessage,
     clearChat,
     setMessages,

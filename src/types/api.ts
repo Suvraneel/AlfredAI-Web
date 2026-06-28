@@ -1,3 +1,9 @@
+export interface Conversation {
+  id: string
+  title: string
+  created_at: string
+}
+
 export interface UserProfile {
   user_id: string
   tenant_id: string
@@ -13,6 +19,7 @@ export interface ToolConnection {
   connected_at: string | null
   scopes: string[]
   last_verified_at: string | null
+  atlassian_account_id?: string | null
 }
 
 export interface ChatRequest {

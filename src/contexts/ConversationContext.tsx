@@ -1,21 +1,45 @@
 'use client'
-import { createContext, useCallback, useContext, useState } from 'react'
-import { mockConversations, type MockConversation } from '@/mock/conversations'
+import { createContext, useCallback, useContext, useEffect, useState } from 'react'
+import type { Conversation } from '@/types/api'
+
+const STORAGE_KEY = 'alfredai:conversations'
+
+function loadFromStorage(): Conversation[] {
+  if (typeof window === 'undefined') return []
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch {
+    return []
+  }
+}
+
+function saveToStorage(conversations: Conversation[]) {
+  try {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations.slice(0, 100)))
+  } catch {}
+}
 
 interface ConversationContextValue {
-  conversations: MockConversation[]
-  addConversation: (conv: MockConversation) => void
+  conversations: Conversation[]
+  addConversation: (conv: Conversation) => void
 }
 
 const ConversationContext = createContext<ConversationContextValue | null>(null)
 
 export function ConversationProvider({ children }: { children: React.ReactNode }) {
-  const [conversations, setConversations] = useState<MockConversation[]>(mockConversations)
+  const [conversations, setConversations] = useState<Conversation[]>([])
 
-  const addConversation = useCallback((conv: MockConversation) => {
+  useEffect(() => {
+    setConversations(loadFromStorage())
+  }, [])
+
+  const addConversation = useCallback((conv: Conversation) => {
     setConversations(prev => {
       if (prev.some(c => c.id === conv.id)) return prev
-      return [conv, ...prev]
+      const next = [conv, ...prev]
+      saveToStorage(next)
+      return next
     })
   }, [])
 

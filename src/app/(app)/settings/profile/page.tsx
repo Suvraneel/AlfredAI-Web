@@ -9,8 +9,9 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { updatePassword } from "@/lib/api"
+import { useConnections } from "@/hooks/useConnections"
 import { getAtlassianId, setAtlassianId, getTenantId } from "@/lib/auth"
-import { Copy, Check, User } from "lucide-react"
+import { Copy, Check, User, Loader2 } from "lucide-react"
 import { toast } from "@/lib/toast"
 
 const passwordSchema = z.object({
@@ -26,6 +27,7 @@ type PasswordFormValues = z.infer<typeof passwordSchema>
 
 export default function ProfilePage() {
   const { user } = useAuth()
+  const { connections, isLoading: connectionsLoading } = useConnections()
   const [atlassianId, setAtlassianIdState] = useState('')
   const [savingAtlassian, setSavingAtlassian] = useState(false)
   const [copied, setCopied] = useState<string | null>(null)
@@ -40,10 +42,20 @@ export default function ProfilePage() {
     defaultValues: { currentPassword: '', newPassword: '', confirmPassword: '' },
   })
 
+  // Seed from localStorage first, then auto-fill from Jira connection if available
   useEffect(() => {
-    const id = getAtlassianId()
-    if (id) setAtlassianIdState(id)
+    const stored = getAtlassianId()
+    if (stored) setAtlassianIdState(stored)
   }, [])
+
+  useEffect(() => {
+    if (connectionsLoading) return
+    const jira = connections.find(c => c.tool === 'jira' && c.status === 'active')
+    if (jira?.atlassian_account_id && !getAtlassianId()) {
+      setAtlassianIdState(jira.atlassian_account_id)
+      setAtlassianId(jira.atlassian_account_id)
+    }
+  }, [connections, connectionsLoading])
 
   const copyToClipboard = (text: string, key: string) => {
     navigator.clipboard.writeText(text)
@@ -119,7 +131,16 @@ export default function ProfilePage() {
           <div className="rounded-xl border border-border bg-bg-surface p-5 space-y-4">
             <div>
               <h2 className="text-sm font-semibold text-text-primary">Atlassian Account ID</h2>
-              <p className="mt-1 text-xs text-text-muted">Required for Jira write actions. Found in your Atlassian profile settings.</p>
+              <p className="mt-1 text-xs text-text-muted">
+                Required for Jira write actions.{' '}
+                {connectionsLoading ? (
+                  <span className="inline-flex items-center gap-1 text-text-muted"><Loader2 className="h-3 w-3 animate-spin" /> Checking Jira connection…</span>
+                ) : connections.find(c => c.tool === 'jira' && c.status === 'active')?.atlassian_account_id ? (
+                  <span className="text-success">Auto-detected from your Jira connection.</span>
+                ) : (
+                  <span>Connect Jira to auto-detect, or paste it from your <a href="https://id.atlassian.com/manage-profile/account-preferences" target="_blank" rel="noreferrer" className="underline">Atlassian profile</a>.</span>
+                )}
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -130,9 +151,6 @@ export default function ProfilePage() {
                 placeholder="712020:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
                 className="font-mono text-xs"
               />
-              <p className="text-xs text-text-muted">
-                Format: <code className="font-mono text-text-secondary">712020:xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx</code>
-              </p>
             </div>
 
             <Button size="sm" onClick={saveAtlassianIdHandler} loading={savingAtlassian}>
